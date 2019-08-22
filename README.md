@@ -1,2 +1,2 @@
-# pointTile
-A useful function to tile the point when loading map, in order to achieve a faster, more comfortable experience. 
+# cellTile
+A useful function to tile the point within certain cells when loading map, in order to achieve a faster, more comfortable experience. 
