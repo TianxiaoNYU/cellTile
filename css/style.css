@@ -1,0 +1,104 @@
+body {
+  margin: 0;
+  height: calc(100% - 51px);
+}
+
+
+html, #map {
+    height: 100%;
+}
+
+html, #map2 {
+    height: 100%;
+}
+
+header.navbar {
+    margin-bottom: 0; /* remove bottom margin */ 
+}
+
+.ui-autocomplete.ui-front{
+    z-index: 1051;
+    height: auto;
+    font-size:14px;
+    max-height: 480px;
+    overflow-x: hidden;
+}
+
+html, body {
+  font-size: 16px;
+  /*height: 100%;*/
+}
+
+.leaflet-container {
+    background-color:white;
+}
+
+
+#map {
+  /*height: 500px;*/
+  height: 1000px;
+}
+
+#map2 {
+  height: 400px;
+}
+
+.scrollable-menu {
+    height: auto;
+    max-height: 500px;
+    width: 400px;
+    /*
+    width: 500px;
+    font-size: 12px;
+    */
+    overflow-x: hidden;
+}
+
+
+#cell_type li {
+    font-size: 14px;
+}
+
+
+.sLabel_1{
+  white-space:nowrap;
+  color: black;
+  font-size: 5px;
+}
+
+.sLabel_1b{
+  white-space:nowrap;
+  color: black;
+  font-size: 7px;
+}
+
+.sLabel_2{
+  white-space:nowrap;
+  color: black;
+  font-size: 8px;
+}
+
+.sLabel_3{
+  white-space:nowrap;
+  color: black;
+  font-size: 10px;
+}
+
+/*bigger labels for 98 cell type network */
+.lLabel_1{
+  white-space:nowrap;
+  color: black;
+  font-size: 10px;
+}
+
+.lLabel_2{
+  white-space:nowrap;
+  color: black;
+  font-size: 12px;
+}
+
+.lLabel_3{
+  white-space:nowrap;
+  color: black;
+  font-size: 14px;
+}
