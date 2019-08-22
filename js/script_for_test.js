@@ -177,8 +177,6 @@ function drawSelectedCell(cl, gene_colorlist){
 		}
 	if(busy_state.length == cl.length){
 		selected_cell_circles = new L.LayerGroup(cell_circle).addTo(map);
-		busy_state.length = 0;
-		cell_circle.length = 0;
 	}else{
 		setTimeout(drawSelectedCell, 150, cl, gene_colorlist);
 	}
@@ -414,6 +412,8 @@ $("#all_genes").click(function(e){
     	var current_bounds = refreshView();
     	cell_list = selectCell(current_bounds);
 		drawSelectedCell(cell_list, colorlist);
+		busy_state.length = 0;
+		cell_circle.length = 0;
 		console.log("All finished");
 	}else{
 		map.removeLayer(selected_cell_circles);
@@ -430,11 +430,15 @@ map.on('moveend', function(e) {
     	new_cell_list = selectCell(new_bounds);
     	if(arraysEqual(new_cell_list, cell_list)){
     		console.log("Same reference");
+    		busy_state.length = 0;
+			cell_circle.length = 0;
     		return;
     	} 
     	map.removeLayer(selected_cell_circles);
     	console.log(new_cell_list);
 		drawSelectedCell(new_cell_list, colorlist);
+		busy_state.length = 0;
+		cell_circle.length = 0;		
 		cell_list = new_cell_list;
     	console.log("All finished");
 	}
