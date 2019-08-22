@@ -17,8 +17,14 @@ var layerNissl;
 var layerPolyA;
 var selectedStain;
 
+//	Parameters to set
+//
 var url = "Pos0_647nm_561nm_combined_clean.csv"
+var cell_border_url = "roi.pos0.all.cells.converted.txt"
+var gene_list_url = "gene.list"
 var imageSize = 8192;
+//
+//
 
 var initial_boundary = {
 	top: 0,
@@ -289,7 +295,7 @@ L.LayerGroup.include({
 
 map.setView([-2048, 2048],3);
 
-fetch("roi.pos0.all.cells.converted.txt")
+fetch(cell_border_url)
 .then(response2 => response2.text())
 .then(function(text2){
 	console.log("load segmentations");
@@ -346,13 +352,13 @@ fetch("cell_centroid.csv")
 	});
 
 
-fetch("Pos0_647nm_561nm_combined_clean.csv")
+fetch(url)
    	.then(response => response.text())
     .then(function(text){
         console.log("load")
         pointlist = text.split("\n");
 		var selected_circles = {};
-		fetch("gene.list")
+		fetch(gene_list_url)
 		.then(response => response.text())
 		.then(function(text){
 			var glist = text.split("\n");
