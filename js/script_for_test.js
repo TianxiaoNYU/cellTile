@@ -29,6 +29,8 @@ var initial_boundary = {
 
 var selected_circles = {};
 var selected_cell_circles = {};
+var cell_circle = [];
+var busy_state = [];
 
 var genes = [];
 var circles = [];
@@ -142,37 +144,44 @@ function selectCell(bounds){
 }
 
 function drawSelectedCell(cl, gene_colorlist){
-	var cell_circle = [];
 	var point_size = map.getZoom() * 0.8;
-	for(var j=0; j < cl.length; j++){
-		var cellid = cl[j];
-		temp_url = url.replace("{z}", cellid);
-		fetch(temp_url)
-    	.then(response => response.text())
-    	.then(function(text){
-    		console.log("loaded");
-        	pointlist = text.split("\n");
-			for(i=0; i<pointlist.length-1; i++){
-				var newplist = pointlist[i].split(",");
-				x = Number(newplist[0]);
-				y = Number(newplist[1]);
-				gene_id = String(newplist[4]);
-	           	cell_color = gene_colorlist[cellid -1];
-				var marker = L.circleMarker(map.unproject([x, y], map.getMaxZoom()), {
-					radius: point_size, 
-					color: cell_color, 
-					fillOpacity: 0.5,
-					stroke: false, 
-					"gene_id": gene_id,   
-				});
-				marker_coords_str = "<b>Cell:</b> " + cellid + "<br>" + "<b>Gene:</b> " + gene_id;
-				marker.bindTooltip(marker_coords_str).openTooltip();
-				cell_circle.push(marker);
-			};
-			console.log("finished");
-		});
+		for(var j=0; j < cl.length; j++){
+			temp_url = url.replace("{z}", cl[j]);
+			fetch(temp_url)
+	    	.then(response => response.text())
+	    	.then(function(text){
+	    		console.log("loaded");
+	        	pointlist = text.split("\n");
+				for(i=0; i<pointlist.length-1; i++){
+					var newplist = pointlist[i].split(",");
+					x = Number(newplist[0]);
+					y = Number(newplist[1]);
+					cellid = String(newplist[3]);
+					gene_id = String(newplist[4]);
+		           	cell_color = gene_colorlist[cellid -1];
+					var marker = L.circleMarker(map.unproject([x, y], map.getMaxZoom()), {
+						radius: point_size, 
+						color: cell_color, 
+						fillOpacity: 0.5,
+						stroke: false, 
+						"gene_id": gene_id,   
+					});
+					marker_coords_str = "<b>Cell:</b> " + cellid + "<br>" + "<b>Gene:</b> " + gene_id;
+					marker.bindTooltip(marker_coords_str).openTooltip();
+					cell_circle.push(marker);
+				};
+				console.log("finished");
+				busy_state[j-1] = 1;
+				console.log(busy_state);
+			});
+		}
+	if(busy_state.length == cl.length){
+		selected_cell_circles = new L.LayerGroup(cell_circle).addTo(map);
+		busy_state.length = 0;
+		cell_circle.length = 0;
+	}else{
+		setTimeout(drawSelectedCell, 150, cl, gene_colorlist);
 	}
-	return cell_circle;
 };
 
 
@@ -404,9 +413,8 @@ $("#all_genes").click(function(e){
 	if(this.checked){
     	var current_bounds = refreshView();
     	cell_list = selectCell(current_bounds);
-    	var cellCircles = drawSelectedCell(cell_list, colorlist);
-    	console.log(cellCircles);
-    	selected_cell_circles = new L.LayerGroup(cellCircles).addTo(map);
+		drawSelectedCell(cell_list, colorlist);
+		console.log("All finished");
 	}else{
 		map.removeLayer(selected_cell_circles);
 	}
@@ -426,8 +434,8 @@ map.on('moveend', function(e) {
     	} 
     	map.removeLayer(selected_cell_circles);
     	console.log(new_cell_list);
-    	var cellCircles = drawSelectedCell(new_cell_list, colorlist);
-    	selected_cell_circles = new L.LayerGroup(cellCircles).addTo(map);
-    	cell_list = new_cell_list;
+		drawSelectedCell(new_cell_list, colorlist);
+		cell_list = new_cell_list;
+    	console.log("All finished");
 	}
 });
