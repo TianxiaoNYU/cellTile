@@ -49,6 +49,7 @@ var g_layers = {};
 var g_displayed = new Set([]);
 var g_color = {};
 var pointlist = [];
+var select_pointlist = [];
 
 // Load map on HTML5 Canvas for faster rendering
 var map = new L.Map('map', {
@@ -193,11 +194,11 @@ function drawSelectedCell(cl, gene_colorlist){
 };
 
 
-function draw_markers(pointlist){
+function draw_markers(pl){
 	var new_circles = [];
 	var point_size = map.getZoom() * 1.2;
-	for(i=0; i<pointlist.length-1; i++){
-		var newplist = pointlist[i].split(",");
+	for(i=0; i<pl.length-1; i++){
+		var newplist = pl[i].split(",");
 		var gene_id = newplist[4];
 		if(g_displayed.has(gene_id)){
 			x = Number(newplist[0]);
@@ -361,7 +362,7 @@ fetch("Pos0_647nm_561nm_combined_clean.csv")
    	.then(response => response.text())
     .then(function(text){
         console.log("load")
-        pointlist = text.split("\n");
+        select_pointlist = text.split("\n");
 		var selected_circles = {};
 		fetch("gene.list")
 		.then(response => response.text())
@@ -397,14 +398,15 @@ fetch("Pos0_647nm_561nm_combined_clean.csv")
 									g_displayed.delete(this_id);
 									delete g_color[this_id];
 									map.removeLayer(selected_circles);
-									new_circles = draw_markers(pointlist);
+									new_circles = draw_markers(select_pointlist);
+									console.log(select_pointlist);
 									selected_circles = new L.LayerGroup(new_circles).addTo(map);
 								})
 							)
 						);
 					}
 					map.removeLayer(selected_circles);
-					new_circles = draw_markers(pointlist);
+					new_circles = draw_markers(select_pointlist);
 					selected_circles = new L.LayerGroup(new_circles).addTo(map);
 				},
 			});
