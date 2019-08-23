@@ -12,13 +12,18 @@ crs.scale = function(zoom) {
 crs.zoom = function(scale) {
 	return Math.log(scale * mapMinResolution) / Math.LN2;
 };
+
+// 	Stain layer to use as the background; see line 221 - 267; can customize by yourself
+//
 var layerDapi;
 var layerNissl;
 var layerPolyA;
 var selectedStain;
+//
+//
 
-var url = "cells/{z}.csv"
-var imageSize = 8192;
+var url = "cells/{z}.csv" 	// url for gene location data
+var imageSize = 8192;		// According to the set map size in line 1 - 14
 
 var initial_boundary = {
 	top: 0,
@@ -212,12 +217,6 @@ function draw_markers(pointlist){
 	}
 	return new_circles;
 }
-
-/*
-L.Control.include({
-  _refocusOnMap: L.Util.falseFn // Do nothing.
-});
-*/
 
 $("#stain")
 .append($("<li>").append($("<a>").attr("id", "stain_dapi").attr("href", "#").text("DAPI")
@@ -425,7 +424,7 @@ $("#all_genes").click(function(e){
 map.on('moveend', function(e) {
     if($("#all_genes").is(':checked')){
     	var new_bounds = refreshView();
-    	if(map.getZoom() <= 2){
+    	if(map.getZoom() <= 1){
     		map.removeLayer(selected_cell_circles);
     		return;
     	}

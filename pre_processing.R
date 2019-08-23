@@ -2,7 +2,8 @@ raw_data <- read.csv("Pos0_647nm_561nm_combined_clean.csv", header = F, stringsA
 colnames(raw_data) <- c("X", "Y", "NA", "cellID", "gene")
 raw_data$cellID <- as.numeric(raw_data$cellID)
 cell_num <- max(raw_data$cellID)
-new_dir <- paste0("/Users/zhaotianxiao/Desktop/cellTile/cells/")
+wd <- getwd()
+new_dir <- paste0(wd, "/cells/")
 dir.create(new_dir, mode = '0777', showWarnings = F)
 setwd(new_dir)
 for(k in 1:cell_num){

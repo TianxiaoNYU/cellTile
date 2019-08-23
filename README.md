@@ -34,6 +34,9 @@ and open your .html file.
 
 - **js/script.js**
   - Need to change the parameters to fit your own data
+    - Map size should fit with your location information (axis, coordinate, ...)
+    - Stain layers to choose
+    - Colorlist now have about 150 colors; would report error if there are more cells. Can manually add new color to prevent.
   
 - **cells/**
   - A collection of csv files each containing all data for each single cell. Names as the cell IDs. Geenrated by pre_processing.R.
