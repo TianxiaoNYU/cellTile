@@ -17,8 +17,14 @@ var layerNissl;
 var layerPolyA;
 var selectedStain;
 
-var url = "cells/{z}.csv"
+//	Parameters to set
+//
+var url = "Pos0_647nm_561nm_combined_clean.csv"
+var cell_border_url = "roi.pos0.all.cells.converted.txt"
+var gene_list_url = "gene.list"
 var imageSize = 8192;
+//
+//
 
 var initial_boundary = {
 	top: 0,
@@ -29,8 +35,6 @@ var initial_boundary = {
 
 var selected_circles = {};
 var selected_cell_circles = {};
-var cell_circle = [];
-var busy_state = [];
 
 var genes = [];
 var circles = [];
@@ -144,44 +148,39 @@ function selectCell(bounds){
 }
 
 function drawSelectedCell(cl, gene_colorlist){
+	var cell_circle = [];
 	var point_size = map.getZoom() * 0.8;
-		for(var j=0; j < cl.length; j++){
-			temp_url = url.replace("{z}", cl[j]);
-			fetch(temp_url)
-	    	.then(response => response.text())
-	    	.then(function(text){
-	    		console.log("loaded");
-	        	pointlist = text.split("\n");
-				for(i=0; i<pointlist.length-1; i++){
-					var newplist = pointlist[i].split(",");
-					x = Number(newplist[0]);
-					y = Number(newplist[1]);
-					cellid = String(newplist[3]);
-					gene_id = String(newplist[4]);
-		           	cell_color = gene_colorlist[cellid -1];
-					var marker = L.circleMarker(map.unproject([x, y], map.getMaxZoom()), {
-						radius: point_size, 
-						color: cell_color, 
-						fillOpacity: 0.5,
-						stroke: false, 
-						"gene_id": gene_id,   
-					});
-					marker_coords_str = "<b>Cell:</b> " + cellid + "<br>" + "<b>Gene:</b> " + gene_id;
-					marker.bindTooltip(marker_coords_str).openTooltip();
-					cell_circle.push(marker);
-				};
+	fetch(url)
+    .then(response => response.text())
+    .then(function(text){
+    	console.log("loaded");
+        pointlist = text.split("\n");
+		for(i=0; i<pointlist.length-1; i++){
+			var newplist = pointlist[i].split(",");
+			var cellid = Number(newplist[3]);
+			if(cl.includes(cellid)){
+				x = Number(newplist[0]);
+				y = Number(newplist[1]);
+				gene_id = String(newplist[4]);
+	            cell_type = cellid;
+	            cell_color = gene_colorlist[cellid -1];
+				var marker = L.circleMarker(map.unproject([x, y], map.getMaxZoom()), {
+					radius: point_size, 
+					color: cell_color, 
+					fillOpacity: 0.5,
+					stroke: false, 
+					"gene_id": gene_id,   
+				});
+				marker_coords_str = "<b>Cell:</b> " + cellid + "<br>" + "<b>Gene:</b> " + gene_id;
+				marker.bindTooltip(marker_coords_str).openTooltip();
+				cell_circle.push(marker);
 				console.log("finished");
-				busy_state[j-1] = 1;
-				console.log(busy_state);
-			});
-		}
-	if(busy_state.length == cl.length){
+			}
+		};
+		console.log(cell_circle);
 		selected_cell_circles = new L.LayerGroup(cell_circle).addTo(map);
-	}else{
-		setTimeout(drawSelectedCell, 150, cl, gene_colorlist);
-	}
-};
-
+    });
+}
 
 function draw_markers(pointlist){
 	var new_circles = [];
@@ -296,7 +295,7 @@ L.LayerGroup.include({
 
 map.setView([-2048, 2048],3);
 
-fetch("roi.pos0.all.cells.converted.txt")
+fetch(cell_border_url)
 .then(response2 => response2.text())
 .then(function(text2){
 	console.log("load segmentations");
@@ -353,13 +352,13 @@ fetch("cell_centroid.csv")
 	});
 
 
-fetch("Pos0_647nm_561nm_combined_clean.csv")
+fetch(url)
    	.then(response => response.text())
     .then(function(text){
         console.log("load")
         pointlist = text.split("\n");
 		var selected_circles = {};
-		fetch("gene.list")
+		fetch(gene_list_url)
 		.then(response => response.text())
 		.then(function(text){
 			var glist = text.split("\n");
@@ -411,10 +410,7 @@ $("#all_genes").click(function(e){
 	if(this.checked){
     	var current_bounds = refreshView();
     	cell_list = selectCell(current_bounds);
-		drawSelectedCell(cell_list, colorlist);
-		busy_state.length = 0;
-		cell_circle.length = 0;
-		console.log("All finished");
+    	drawSelectedCell(cell_list, colorlist);
 	}else{
 		map.removeLayer(selected_cell_circles);
 	}
@@ -430,16 +426,10 @@ map.on('moveend', function(e) {
     	new_cell_list = selectCell(new_bounds);
     	if(arraysEqual(new_cell_list, cell_list)){
     		console.log("Same reference");
-    		busy_state.length = 0;
-			cell_circle.length = 0;
     		return;
     	} 
     	map.removeLayer(selected_cell_circles);
-    	console.log(new_cell_list);
-		drawSelectedCell(new_cell_list, colorlist);
-		busy_state.length = 0;
-		cell_circle.length = 0;		
-		cell_list = new_cell_list;
-    	console.log("All finished");
+    	drawSelectedCell(new_cell_list, colorlist);
+    	cell_list = new_cell_list;
 	}
 });
