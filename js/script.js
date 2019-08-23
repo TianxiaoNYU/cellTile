@@ -185,6 +185,7 @@ function drawSelectedCell(cl, gene_colorlist){
 			});
 		}
 	if(busy_state[cl.length - 1] == cl[cl.length - 1]){
+		map.removeLayer(selected_cell_circles);
 		selected_cell_circles = new L.LayerGroup(cell_circle).addTo(map);
 	}else{
 		setTimeout(drawSelectedCell, 100, cl, gene_colorlist);
@@ -434,7 +435,6 @@ map.on('moveend', function(e) {
     		clearCache();
     		return;
     	} 
-    	map.removeLayer(selected_cell_circles);
     	console.log(new_cell_list);
 		drawSelectedCell(new_cell_list, colorlist);
 		clearCache();		
