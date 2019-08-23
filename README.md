@@ -34,8 +34,10 @@ and open your .html file.
 
 - **js/script.js**
   - Need to change the parameters to fit your own data
+  
+- **cells/**
+  - A collection of csv files each containing all data for each single cell. Names as the cell IDs. Geenrated by pre_processing.R.
 
-## About _test
-
-- Use a separated input transcription file each corresponding to individual cell
-- Still in progress, but probably can work
+## About archive
+- Old version which load the whole data at once; may not be compatible when data is really large; still can work in small dataset.
+- Also can work. If interested, please give a try.
