@@ -83,7 +83,7 @@ var colorlist = [
 	"#DDEFFF", "#000035", "#7B4F4B", "#A1C299", "#300018", "#0AA6D8", "#013349", "#00846F",
 	"#372101"
 ];
-
+// get color for cell/gene, return int to use in colorlist
 function getcolor(gene_id){
 	var occupied = [];
 	for(i=0; i<50; i++){
@@ -98,7 +98,7 @@ function getcolor(gene_id){
 		}
 	}
 }
-
+// if two arrays are equal, return boolean
 function arraysEqual(a, b) {
   if (a === b) return true;
   if (a == null || b == null) return false;
@@ -108,7 +108,7 @@ function arraysEqual(a, b) {
   }
   return true;
 }
-
+//	refresh view when move or zoom, return boundary
 function refreshView(){
     let center = map.getCenter();
     let boundary = getBound(L.latLngBounds([center]));
@@ -118,19 +118,22 @@ function refreshView(){
     } 
     return boundary;
 }
-
+//	clear cache
 function clearCache(){
 	busy_state.length = 0;
 	cell_circle.length = 0;
 }
 
+//	use to create the boundary for choosing centroids of cells
+//	
 function getBound(bounds){
     let zoom = map.getZoom();
     let tileNumber = Math.pow(2, zoom);
     let tileSize = imageSize / tileNumber;
-    let bounds_length = (0.1 * zoom + 0.5) * tileSize;
+    let bounds_length = (0.1 * zoom + 0.5) * tileSize; 	// size of boundary; can set manually
     if(bounds) {
-    	var new_boundary = {
+    	// here it's square; can be changed into different shape.
+    	var new_boundary = {							
 			top: bounds.getNorth() + bounds_length,
 			down: bounds.getSouth() - bounds_length,
 			left: bounds.getWest() - bounds_length,
@@ -141,7 +144,10 @@ function getBound(bounds){
     	return 0;
     }
 }
+//
+//
 
+//	select cell by choosing the centroid within boundary; return array
 function selectCell(bounds){
 	var cellList = [];
 	for (var i = 0; i < cell_loc_x.length-1; i++) {
@@ -154,6 +160,7 @@ function selectCell(bounds){
 	return cellList;
 }
 
+//	draw points in whole cells; 
 function drawSelectedCell(cl, gene_colorlist){
 	var point_size = map.getZoom() * 0.8;
 		for(var j=0; j < cl.length; j++){
@@ -193,7 +200,7 @@ function drawSelectedCell(cl, gene_colorlist){
 	}
 };
 
-
+//	draw points for selected genes
 function draw_markers(pl){
 	var new_circles = [];
 	var point_size = map.getZoom() * 1.2;
@@ -220,6 +227,8 @@ function draw_markers(pl){
 	return new_circles;
 }
 
+
+//	import stain image
 $("#stain")
 .append($("<li>").append($("<a>").attr("id", "stain_dapi").attr("href", "#").text("DAPI")
 	.click(function(e){
@@ -299,8 +308,10 @@ L.LayerGroup.include({
 	},
 });
 
+//	set initial map view
 map.setView([-2048, 2048],3);
 
+//	draw cell border as polygon
 fetch("roi.pos0.all.cells.converted.txt")
 .then(response2 => response2.text())
 .then(function(text2){
@@ -339,10 +350,8 @@ fetch("roi.pos0.all.cells.converted.txt")
 		//zoom6layer.addLayer(polygon);
 		});
 });
-      // Load point data for zoom 5,6 markers
-      // FILE NAME WILL NEED TO BE EDITED
-      // FILE FORMAT SHOULD BE IN FORM: Cell Name, x, y, cluster #
 
+//	import cell centroid for selecting
 fetch("cell_centroid.csv")
 .then(response => response.text())
 .then(function(text){
@@ -357,7 +366,7 @@ fetch("cell_centroid.csv")
 		}
 	});
 
-
+//	select gene in dropdown box
 fetch("Pos0_647nm_561nm_combined_clean.csv")
    	.then(response => response.text())
     .then(function(text){
@@ -413,6 +422,7 @@ fetch("Pos0_647nm_561nm_combined_clean.csv")
 		});
 	});
 
+//	onClick for all_gene
 $("#all_genes").click(function(e){
 	if(this.checked){
     	var current_bounds = refreshView();
@@ -424,6 +434,7 @@ $("#all_genes").click(function(e){
 	}
 });
 
+//	when move or zoom, to refresh and draw points
 map.on('moveend', function(e) {
     if($("#all_genes").is(':checked')){
     	var new_bounds = refreshView();
