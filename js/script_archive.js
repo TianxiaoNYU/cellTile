@@ -154,9 +154,9 @@ function drawSelectedCell(cl, gene_colorlist){
     .then(response => response.text())
     .then(function(text){
     	console.log("loaded");
-        pointlist = text.split("\n");
-		for(i=0; i<pointlist.length-1; i++){
-			var newplist = pointlist[i].split(",");
+        temp_pointlist = text.split("\n");
+		for(i=0; i<temp_pointlist.length-1; i++){
+			var newplist = temp_pointlist[i].split(",");
 			var cellid = Number(newplist[3]);
 			if(cl.includes(cellid)){
 				x = Number(newplist[0]);
