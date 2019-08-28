@@ -567,7 +567,7 @@ $("#all_genes").click(function(e){
 
 		console.log(cell_list);	
 		var initialMarkers = [];
-		for(var i=0; i<250000; i++){
+		for(var i=0; i<300000; i++){
 		//for(var i=0; i<2000; i++){
 			var marker = L.circleMarker(map.unproject([0, 0], map.getMaxZoom()), {
 				radius: map.getZoom() * 0.8, color: "#FFFF00", fillOpacity: 0.5,
@@ -589,7 +589,7 @@ $("#all_genes").click(function(e){
 		callDrawSelectedCell(Array.from(cell_list), [], colorlist);
 		clearCache();
 	}else{
-		map.removeLayer(selected_cell_circles);
+		callDrawSelectedCell([], Array.from(cell_list), colorlist);
 	}
 });
 
@@ -597,7 +597,7 @@ map.on('moveend', function(e) {
     if($("#all_genes").is(':checked')){
     	var new_bounds = refreshView();
     	if(map.getZoom() <= 1){
-    		map.removeLayer(selected_cell_circles);
+    		callDrawSelectedCell([], Array.from(cell_list), colorlist);
     		return;
     	}
     	new_cell_list = selectCell(new_bounds);
