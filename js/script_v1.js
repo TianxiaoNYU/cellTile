@@ -35,6 +35,7 @@ var initial_boundary = {
 var selected_circles = {};
 var selected_cell_circles = {};
 var cell_circle = [];
+var busy_state = [];
 
 var genes = [];
 var circles = [];
@@ -49,9 +50,6 @@ var g_displayed = new Set([]);
 var g_color = {};
 var pointlist = [];
 var select_pointlist = [];
-var each_cell = {};
-var each_layer = {};
-var all_layer = {};
 
 // Load map on HTML5 Canvas for faster rendering
 var map = new L.Map('map', {
@@ -120,6 +118,11 @@ function refreshView(){
     } 
     return boundary;
 }
+//	clear cache
+function clearCache(){
+	busy_state.length = 0;
+	cell_circle.length = 0;
+}
 
 //	use to create the boundary for choosing centroids of cells
 //	
@@ -158,13 +161,31 @@ function selectCell(bounds){
 	return cellList;
 }
 
-function drawSelectedCell(cl, gene_colorlist){
+function drawSelectedCell_step2(cl, gene_colorlist, is_done, each_cell){
+	var all_done = true;
+	for(var j=0; j<cl.length; j++){
+		if(is_done[cl[j]]==false){
+			all_done = false;
+			break;
+		}
+	}
+	if(all_done==true){
+		for(var j=0; j<cl.length; j++){
+			cell_circle = cell_circle.concat(each_cell[cl[j]]);
+		}
+		map.removeLayer(selected_cell_circles);
+		selected_cell_circles = new L.LayerGroup(cell_circle).addTo(map);
+	}else{
+		setTimeout(drawSelectedCell_step2, 100, cl, gene_colorlist, is_done, each_cell);
+	}
+};
+
+function drawSelectedCell_step1(cl, gene_colorlist, is_done){
 	var point_size = map.getZoom() * 0.8;
-	all_layer = new L.LayerGroup();
+	var each_cell = {};
 	for(var j=0; j < cl.length; j++){
 		temp_url = url.replace("{z}", cl[j]);
 		each_cell[cl[j]] = [];
-		each_layer[cl[j]] = [];
 		fetch(temp_url)
 		.then(response => response.text())
 		.then(function(text){
@@ -189,26 +210,33 @@ function drawSelectedCell(cl, gene_colorlist){
 				});
 				marker_coords_str = "<b>Cell:</b> " + cellid + "<br>" + "<b>Gene:</b> " + gene_id;
 				marker.bindTooltip(marker_coords_str).openTooltip();
+				//cell_circle.push(marker);
 				each_cell[basename].push(marker);
 			};
-			each_layer[basename] = new L.LayerGroup(each_cell[basename]);
-			all_layer.addLayer(each_layer[basename]);
+			//console.log("finished one turn");
+			is_done[basename] = true;
+			//busy_state[j-1] = cl[j-1];
 		});
 	}
-	all_layer.addTo(map);
+	//if(busy_state[cl.length - 1] == cl[cl.length - 1]){
+	//}else{
+	//	setTimeout(drawSelectedCell, 100, cl, gene_colorlist);
+	//}
+	drawSelectedCell_step2(cl, gene_colorlist, is_done, each_cell);
 };
 
-function remove_layer(cl){
-	for(var i in cl){
-		key = String(cl[i]);
-		all_layer.removeLayer(each_layer[key]);
+function callDrawSelectedCell(cl, gene_colorlist){
+	var is_done = {};
+	for(var j=0; j<cl.length; j++){
+		is_done[cl[j]] = false;
 	}
-}
+	drawSelectedCell_step1(cl, gene_colorlist, is_done);
+};
 
 //	draw points for selected genes
 function draw_markers(pl){
 	var new_circles = [];
-	var point_size = map.getZoom() * 1.1;
+	var point_size = map.getZoom() * 1.2;
 	for(i=0; i<pl.length-1; i++){
 		var newplist = pl[i].split(",");
 		var gene_id = newplist[4];
@@ -314,7 +342,7 @@ L.LayerGroup.include({
 });
 
 //	set initial map view
-map.setView([-4096, 4096],4);
+map.setView([-2048, 2048],3);
 
 //	draw cell border as polygon
 fetch("roi.pos0.all.cells.converted.txt")
@@ -351,8 +379,7 @@ fetch("roi.pos0.all.cells.converted.txt")
 			latlngs.push([latlng.lat, latlng.lng]);
 		}
 		//alert(latlngs);
-		polygon = L.polygon(latlngs, {color:"red", weight:1, fill:false});
-		polygon.addTo(map);
+		var polygon = L.polygon(latlngs, {color:"red", weight:1, fill:false}).addTo(map);
 		//zoom6layer.addLayer(polygon);
 		});
 });
@@ -428,26 +455,15 @@ fetch("Pos0_647nm_561nm_combined_clean.csv")
 		});
 	});
 
-var imageUrl = 'all_cells.png';
-var imageBounds = [[0,0], [-8192, 8192]];
-var minimap_layer = L.imageOverlay(imageUrl, imageBounds)
-
-var miniMap = new L.Control.MiniMap(minimap_layer, {
-	width: 256,
-	height: 256,
-	zoomLevelOffset: -5,
-	centerFixed: [-4096, 4096]
-}).addTo(map);
-
-
 //	onClick for all_gene
 $("#all_genes").click(function(e){
 	if(this.checked){
     	var current_bounds = refreshView();
     	cell_list = selectCell(current_bounds);
-		drawSelectedCell(cell_list, colorlist);
+		callDrawSelectedCell(cell_list, colorlist);
+		clearCache();
 	}else{
-		map.removeLayer(all_layer);
+		map.removeLayer(selected_cell_circles);
 	}
 });
 
@@ -455,19 +471,19 @@ $("#all_genes").click(function(e){
 map.on('moveend', function(e) {
     if($("#all_genes").is(':checked')){
     	var new_bounds = refreshView();
-    	if(map.getZoom() <= 2){
-    		map.removeLayer(all_layer);
+    	if(map.getZoom() <= 1){
+    		map.removeLayer(selected_cell_circles);
     		return;
     	}
     	new_cell_list = selectCell(new_bounds);
     	if(arraysEqual(new_cell_list, cell_list)){
     		console.log("Same reference");
+    		clearCache();
     		return;
     	} 
-    	add_list = new_cell_list.filter(function(v){ return cell_list.indexOf(v) == -1 });
-    	remove_list = cell_list.filter(function(v){ return new_cell_list.indexOf(v) == -1 });
-    	remove_layer(remove_list);
-		drawSelectedCell(add_list, colorlist);
+    	console.log(new_cell_list);
+		callDrawSelectedCell(new_cell_list, colorlist);
+		clearCache();		
 		cell_list = new_cell_list;
 	}
 });

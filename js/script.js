@@ -24,6 +24,10 @@ var selectedStain;
 
 var url = "cells/{z}.csv" 	// url for gene location data
 var imageSize = 8192;		// According to the set map size in line 1 - 14
+var numMarkers = 0;
+var free_markers = new Set([]);
+var all_markers = new Set([]);
+
 
 var initial_boundary = {
 	top: 0,
@@ -34,6 +38,8 @@ var initial_boundary = {
 
 var selected_circles = {};
 var selected_cell_circles = {};
+var onscreen_circles = {};
+
 var cell_circle = [];
 var busy_state = [];
 
@@ -49,7 +55,6 @@ var g_layers = {};
 var g_displayed = new Set([]);
 var g_color = {};
 var pointlist = [];
-var select_pointlist = [];
 
 // Load map on HTML5 Canvas for faster rendering
 var map = new L.Map('map', {
@@ -83,7 +88,7 @@ var colorlist = [
 	"#DDEFFF", "#000035", "#7B4F4B", "#A1C299", "#300018", "#0AA6D8", "#013349", "#00846F",
 	"#372101"
 ];
-// get color for cell/gene, return int to use in colorlist
+
 function getcolor(gene_id){
 	var occupied = [];
 	for(i=0; i<50; i++){
@@ -98,7 +103,7 @@ function getcolor(gene_id){
 		}
 	}
 }
-// if two arrays are equal, return boolean
+
 function arraysEqual(a, b) {
   if (a === b) return true;
   if (a == null || b == null) return false;
@@ -108,7 +113,19 @@ function arraysEqual(a, b) {
   }
   return true;
 }
-//	refresh view when move or zoom, return boundary
+
+
+function getDifference(a, b){ //a - b
+	var newDiff = new Set([]);
+	a.forEach(function(c_id){
+		if(!b.has(c_id)){
+			newDiff.add(c_id);
+		}
+	});
+	return newDiff;
+}	
+
+
 function refreshView(){
     let center = map.getCenter();
     let boundary = getBound(L.latLngBounds([center]));
@@ -118,14 +135,12 @@ function refreshView(){
     } 
     return boundary;
 }
-//	clear cache
+
 function clearCache(){
-	busy_state.length = 0;
-	cell_circle.length = 0;
+	busy_state = [];
+	cell_circle = [];
 }
 
-//	use to create the boundary for choosing centroids of cells
-//	
 function getBound(bounds){
     let zoom = map.getZoom();
     let tileNumber = Math.pow(2, zoom);
@@ -145,10 +160,7 @@ function getBound(bounds){
     	return 0;
     }
 }
-//
-//
 
-//	select cell by choosing the centroid within boundary; return array
 function selectCell(bounds){
 	var cellList = [];
 	for (var i = 0; i < cell_loc_x.length-1; i++) {
@@ -158,10 +170,11 @@ function selectCell(bounds){
 			cellList.push(i+1);
 		}
 	}
+	cellList = new Set(cellList);
 	return cellList;
 }
 
-function drawSelectedCell_step2(cl, gene_colorlist, is_done, each_cell){
+function drawSelectedCell_step2(cl, rm_cl, gene_colorlist, is_done, each_cell){
 	var all_done = true;
 	for(var j=0; j<cl.length; j++){
 		if(is_done[cl[j]]==false){
@@ -170,19 +183,101 @@ function drawSelectedCell_step2(cl, gene_colorlist, is_done, each_cell){
 		}
 	}
 	if(all_done==true){
-		for(var j=0; j<cl.length; j++){
-			cell_circle = cell_circle.concat(each_cell[cl[j]]);
+		console.log("Got all done!");
+		console.log("Freeing up markers by removing...");
+		var f_marker_add = [];
+		var default_latlng = map.unproject([0,0], map.getMaxZoom());
+		for(var j=0; j<rm_cl.length; j++){
+			//map.removeLayer(onscreen_circles[rm_cl[j]]);
+			var t_rm_cell_circle = onscreen_circles[rm_cl[j]];
+			for(var k=0; k<t_rm_cell_circle.length; k++){
+				var t_marker_id = t_rm_cell_circle[k];
+				var t_marker_layer = map._layers[t_marker_id];
+				t_marker_layer.options.color = "#FFFF00";
+				t_marker_layer.options.radius = 2.0;
+				t_marker_layer._latlng = default_latlng;
+				t_marker_layer.setTooltipContent("");
+				t_marker_layer.redraw();
+				f_marker_add.push(t_marker_id);
+			}
+			delete onscreen_circles[rm_cl[j]];
 		}
-		map.removeLayer(selected_cell_circles);
-		selected_cell_circles = new L.LayerGroup(cell_circle).addTo(map);
+		for(var j=0; j<f_marker_add.length; j++){
+			free_markers.add(f_marker_add[j]);
+		}
+
+		console.log("Adding markers from new cells...");
+		var f_marker_list = Array.from(free_markers);
+		var f_marker_delete = [];
+		var f_ind = 0;
+		var need_free_marker = 0;
+		for(var j=0; j<cl.length; j++){
+			//cell_circle = cell_circle.concat(each_cell[cl[j]]);
+			//var t_cell_circle = new L.LayerGroup(each_cell[cl[j]]);
+			var t_cell_circle = each_cell[cl[j]];
+			onscreen_circles[cl[j]] = [];
+			//t_cell_circle.addTo(map);
+			console.log("Doing " + cl[j]);
+			//console.log(f_marker_list);
+			for(var k=0; k<t_cell_circle.length; k++){
+				if(f_ind>=f_marker_list.length){
+					//console.log("Need More Free Markers!");
+					need_free_marker+=1;
+					continue;
+				}
+				var t_marker = t_cell_circle[k];
+				var f_marker_id = f_marker_list[f_ind];
+				//console.log(f_ind);
+				//console.log(f_marker_id);
+				var f_marker_layer = map._layers[f_marker_id];
+				//console.log(f_marker_layer);
+
+
+				var t_latlng = t_marker.getLatLng();
+				var t_radius = t_marker.getRadius();
+				var t_color = t_marker.options.color;
+				var t_coord_str = t_marker.options.coord_str;
+				//console.log(t_color);
+				//console.log(t_latlng);
+				f_marker_layer.options.color = t_color;
+				f_marker_layer.options.radius = t_radius;
+				f_marker_layer._latlng = t_latlng;
+				//f_marker_layer.setLatLng(t_latlng);
+				//f_marker_layer.setRadius(t_radius);
+				//f_marker_layer.setStyle({color: t_color});
+				f_marker_layer.setTooltipContent(t_coord_str);
+				f_marker_layer.redraw();
+				f_marker_delete.push(f_marker_id);
+				onscreen_circles[cl[j]].push(f_marker_id);
+				f_ind+=1;
+				
+			}
+			//onscreen_circles[cl[j]] = t_cell_circle;
+			console.log("Done " + cl[j]);
+		}
+		for(var j=0; j<f_marker_delete.length; j++){
+			free_markers.delete(f_marker_delete[j]);
+		}
+
+		if(need_free_marker>0){
+			console.log("Need MORE FREE MARKERS " + need_free_marker);
+		}
+		console.log("Finished add markers");
+		//var f_marker_list = Array.from(free_markers);
+		//map.removeLayer(selected_cell_circles);
+		//selected_cell_circles = new L.LayerGroup(cell_circle).addTo(map);
+		//console.log("Number of markers: " + 
+		console.log("Finished all");
 	}else{
-		setTimeout(drawSelectedCell_step2, 100, cl, gene_colorlist, is_done, each_cell);
+		setTimeout(drawSelectedCell_step2, 500, cl, rm_cl, gene_colorlist, is_done, each_cell);
 	}
 };
 
-function drawSelectedCell_step1(cl, gene_colorlist, is_done){
+function drawSelectedCell_step1(cl, rm_cl, gene_colorlist, is_done){
 	var point_size = map.getZoom() * 0.8;
 	var each_cell = {};
+	var remove_each_cell = {};
+
 	for(var j=0; j < cl.length; j++){
 		temp_url = url.replace("{z}", cl[j]);
 		each_cell[cl[j]] = [];
@@ -206,10 +301,11 @@ function drawSelectedCell_step1(cl, gene_colorlist, is_done){
 					color: cell_color, 
 					fillOpacity: 0.5,
 					stroke: false, 
-					"gene_id": gene_id,   
+					"gene_id": gene_id,
+					"coord_str": "<b>Cell:</b> " + cellid + "<br>" + "<b>Gene:</b> " + gene_id, 
 				});
 				marker_coords_str = "<b>Cell:</b> " + cellid + "<br>" + "<b>Gene:</b> " + gene_id;
-				marker.bindTooltip(marker_coords_str).openTooltip();
+				//marker.bindTooltip(marker_coords_str).openTooltip();
 				//cell_circle.push(marker);
 				each_cell[basename].push(marker);
 			};
@@ -222,23 +318,23 @@ function drawSelectedCell_step1(cl, gene_colorlist, is_done){
 	//}else{
 	//	setTimeout(drawSelectedCell, 100, cl, gene_colorlist);
 	//}
-	drawSelectedCell_step2(cl, gene_colorlist, is_done, each_cell);
+	drawSelectedCell_step2(cl, rm_cl, gene_colorlist, is_done, each_cell);
 };
 
-function callDrawSelectedCell(cl, gene_colorlist){
+function callDrawSelectedCell(cl, rm_cl, gene_colorlist){
 	var is_done = {};
 	for(var j=0; j<cl.length; j++){
 		is_done[cl[j]] = false;
 	}
-	drawSelectedCell_step1(cl, gene_colorlist, is_done);
+	drawSelectedCell_step1(cl, rm_cl, gene_colorlist, is_done);
 };
 
-//	draw points for selected genes
-function draw_markers(pl){
+
+function draw_markers(pointlist){
 	var new_circles = [];
 	var point_size = map.getZoom() * 1.2;
-	for(i=0; i<pl.length-1; i++){
-		var newplist = pl[i].split(",");
+	for(i=0; i<pointlist.length-1; i++){
+		var newplist = pointlist[i].split(",");
 		var gene_id = newplist[4];
 		if(g_displayed.has(gene_id)){
 			x = Number(newplist[0]);
@@ -260,8 +356,6 @@ function draw_markers(pl){
 	return new_circles;
 }
 
-
-//	import stain image
 $("#stain")
 .append($("<li>").append($("<a>").attr("id", "stain_dapi").attr("href", "#").text("DAPI")
 	.click(function(e){
@@ -341,10 +435,8 @@ L.LayerGroup.include({
 	},
 });
 
-//	set initial map view
 map.setView([-2048, 2048],3);
 
-//	draw cell border as polygon
 fetch("roi.pos0.all.cells.converted.txt")
 .then(response2 => response2.text())
 .then(function(text2){
@@ -354,7 +446,7 @@ fetch("roi.pos0.all.cells.converted.txt")
 	i = 0;
 	var map_cell = {};
 	//alert(seglist);
-	for(i=0; i<44047; i++){
+	for(i=0; i<44046; i++){
 		var newplist = seglist[i].split(",");
 		x = Number(newplist[1]);
 		y = Number(newplist[2]);
@@ -380,11 +472,14 @@ fetch("roi.pos0.all.cells.converted.txt")
 		}
 		//alert(latlngs);
 		var polygon = L.polygon(latlngs, {color:"red", weight:1, fill:false}).addTo(map);
+		//var polygon = L.polygon(latlngs, {color:"red", weight:1, fill:false});
 		//zoom6layer.addLayer(polygon);
 		});
 });
+      // Load point data for zoom 5,6 markers
+      // FILE NAME WILL NEED TO BE EDITED
+      // FILE FORMAT SHOULD BE IN FORM: Cell Name, x, y, cluster #
 
-//	import cell centroid for selecting
 fetch("cell_centroid.csv")
 .then(response => response.text())
 .then(function(text){
@@ -399,12 +494,12 @@ fetch("cell_centroid.csv")
 		}
 	});
 
-//	select gene in dropdown box
+
 fetch("Pos0_647nm_561nm_combined_clean.csv")
    	.then(response => response.text())
     .then(function(text){
         console.log("load")
-        select_pointlist = text.split("\n");
+        pointlist = text.split("\n");
 		var selected_circles = {};
 		fetch("gene.list")
 		.then(response => response.text())
@@ -440,34 +535,64 @@ fetch("Pos0_647nm_561nm_combined_clean.csv")
 									g_displayed.delete(this_id);
 									delete g_color[this_id];
 									map.removeLayer(selected_circles);
-									new_circles = draw_markers(select_pointlist);
-									console.log(select_pointlist);
+									new_circles = draw_markers(pointlist);
 									selected_circles = new L.LayerGroup(new_circles).addTo(map);
 								})
 							)
 						);
 					}
 					map.removeLayer(selected_circles);
-					new_circles = draw_markers(select_pointlist);
+					new_circles = draw_markers(pointlist);
 					selected_circles = new L.LayerGroup(new_circles).addTo(map);
 				},
 			});
 		});
 	});
 
-//	onClick for all_gene
+var imageUrl = 'all_cells.png';
+var imageBounds = [[0,0], [-8192, 8192]];
+var minimap_layer = L.imageOverlay(imageUrl, imageBounds)
+
+var miniMap = new L.Control.MiniMap(minimap_layer, {
+	width: 256,
+	height: 256,
+	zoomLevelOffset: -5,
+	centerFixed: [-4096, 4096]
+}).addTo(map);
+
 $("#all_genes").click(function(e){
 	if(this.checked){
     	var current_bounds = refreshView();
     	cell_list = selectCell(current_bounds);
-		callDrawSelectedCell(cell_list, colorlist);
+
+		console.log(cell_list);	
+		var initialMarkers = [];
+		for(var i=0; i<250000; i++){
+		//for(var i=0; i<2000; i++){
+			var marker = L.circleMarker(map.unproject([0, 0], map.getMaxZoom()), {
+				radius: map.getZoom() * 0.8, color: "#FFFF00", fillOpacity: 0.5,
+				stroke: false, "gene_id": "NA", "markertype": "transcript" 
+			});
+			marker.bindTooltip("").openTooltip();
+			initialMarkers.push(marker);
+		}
+		var allMarkers = new L.LayerGroup(initialMarkers).addTo(map);
+		console.log("Done initializing");
+		for (var i in map._layers) {
+			if (map._layers[i].options.markertype == "transcript") {
+				all_markers.add(i);
+				free_markers.add(i);
+			}
+		}
+		console.log(map);
+			
+		callDrawSelectedCell(Array.from(cell_list), [], colorlist);
 		clearCache();
 	}else{
 		map.removeLayer(selected_cell_circles);
 	}
 });
 
-//	when move or zoom, to refresh and draw points
 map.on('moveend', function(e) {
     if($("#all_genes").is(':checked')){
     	var new_bounds = refreshView();
@@ -476,13 +601,20 @@ map.on('moveend', function(e) {
     		return;
     	}
     	new_cell_list = selectCell(new_bounds);
-    	if(arraysEqual(new_cell_list, cell_list)){
-    		console.log("Same reference");
-    		clearCache();
-    		return;
-    	} 
+		var diff_list = Array.from(getDifference(new_cell_list, cell_list));
+		var rm_list = Array.from(getDifference(cell_list, new_cell_list));
+    	//if(arraysEqual(new_cell_list, cell_list)){
+    	//	console.log("Same reference");
+    	//	clearCache();
+    	//	return;
+    	//} 
     	console.log(new_cell_list);
-		callDrawSelectedCell(new_cell_list, colorlist);
+		console.log("diff_list");
+		console.log(diff_list);
+		console.log("rm_list")
+		console.log(rm_list);
+		//callDrawSelectedCell(new_cell_list, colorlist);
+		callDrawSelectedCell(diff_list, rm_list, colorlist);
 		clearCache();		
 		cell_list = new_cell_list;
 	}
