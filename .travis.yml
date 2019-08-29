@@ -2,10 +2,11 @@ matrix:
   include:
     - language: python
       python: 2.7
+	- python get_centroid.py
 
     - language: r
-
-    - language: javascript
+      script:
+	- Rscript pre_processing.R
 
 notifications:
   email:
