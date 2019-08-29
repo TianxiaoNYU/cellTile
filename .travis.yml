@@ -1,0 +1,12 @@
+matrix:
+  include:
+    - language: python
+      python: 2.7
+
+    - language: r
+
+    - language: javascript
+
+notifications:
+  email:
+    - zhao-tx16@mails.tsinghua.edu.cn
