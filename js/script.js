@@ -55,6 +55,8 @@ var g_layers = {};
 var g_displayed = new Set([]);
 var g_color = {};
 var pointlist = [];
+var all_poly = [];
+var sc_poly = [];
 
 // Load map on HTML5 Canvas for faster rendering
 var map = new L.Map('map', {
@@ -479,6 +481,89 @@ fetch("roi.pos0.all.cells.converted.txt")
       // Load point data for zoom 5,6 markers
       // FILE NAME WILL NEED TO BE EDITED
       // FILE FORMAT SHOULD BE IN FORM: Cell Name, x, y, cluster #
+
+$("#all_density").click(function(e){
+	if(this.checked){
+		fetch("KDE.csv")
+		.then(response2 => response2.text())
+		.then(function(text2){
+			console.log("load KDE");
+			var seg = text2;
+			seglist = seg.split("\n");
+			i = 0;
+			var kde_cell = {};
+			for(i=0; i<seglist.length; i++){
+				var newplist = seglist[i].split(",");
+				x = Number(newplist[1]);
+				y = Number(newplist[2]);
+				cell_id = String(newplist[0]);
+				a = [x,y];
+				if(kde_cell.hasOwnProperty(cell_id)){
+					kde_cell[cell_id].push(a);
+				}
+				else{
+					kde_cell[cell_id] = [];
+					kde_cell[cell_id].push(a);
+				}
+			}
+			Object.keys(kde_cell).forEach(function (cell_id){
+				var latlngs = [];
+				for(i=0; i<kde_cell[cell_id].length; i++){
+					var latlng = map.unproject(kde_cell[cell_id][i], map.getMaxZoom());
+					latlngs.push([latlng.lat, latlng.lng]);
+				}
+				all_poly[cell_id] = L.polygon(latlngs, {color:"green", weight:1, fill:false}).addTo(map);
+				});
+		});
+	}else{
+		all_poly.forEach(function(layer){
+			map.removeLayer(layer);
+		});	
+	}
+})
+
+$("#sc_density").click(function(e){
+	if(this.checked){
+		fetch("sc_KDE.csv")
+		.then(response2 => response2.text())
+		.then(function(text2){
+			console.log("load KDE");
+			var seg = text2;
+			seglist = seg.split("\n");
+			i = 0;
+			var kde_cell = {};
+			for(i=0; i<seglist.length; i++){
+				var newplist = seglist[i].split(",");
+				x = Number(newplist[1]);
+				y = Number(newplist[2]);
+				cell_id = String(newplist[0]);
+				a = [x,y];
+				if(kde_cell.hasOwnProperty(cell_id)){
+					kde_cell[cell_id].push(a);
+				}
+				else{
+					kde_cell[cell_id] = [];
+					kde_cell[cell_id].push(a);
+				}
+			}
+			var count = 0;
+			Object.keys(kde_cell).forEach(function (cell_id){
+				var latlngs = [];
+				for(i=0; i<kde_cell[cell_id].length; i++){
+					var latlng = map.unproject(kde_cell[cell_id][i], map.getMaxZoom());
+					latlngs.push([latlng.lat, latlng.lng]);
+				}
+				sc_poly[count] = L.polygon(latlngs, {color:"blue", weight:1, fill:false}).addTo(map);
+				count++;
+				});
+		});
+	}else{
+		sc_poly.forEach(function(layer){
+			map.removeLayer(layer);
+		});	
+	}
+})
+
 
 fetch("cell_centroid.csv")
 .then(response => response.text())
