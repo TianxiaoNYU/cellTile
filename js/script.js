@@ -91,6 +91,14 @@ var colorlist = [
 	"#372101"
 ];
 
+var sc_density_color_list = [
+	"#08519c","#3182bd", "#6baed6","#9ecae1", "#c6dbef", "#eff3ff"
+];
+
+var all_density_color_list = [
+	'#005a32','#238b45','#41ab5d','#74c476','#a1d99b','#c7e9c0','#e5f5e0','#f7fcf5'
+]
+
 function getcolor(gene_id){
 	var occupied = [];
 	for(i=0; i<50; i++){
@@ -473,8 +481,8 @@ fetch("roi.pos0.all.cells.converted.txt")
 			latlngs.push([latlng.lat, latlng.lng]);
 		}
 		//alert(latlngs);
-		var polygon = L.polygon(latlngs, {color:"red", weight:1, fill:false}).addTo(map);
-		//var polygon = L.polygon(latlngs, {color:"red", weight:1, fill:false});
+		//var polygon = L.polygon(latlngs, {color:"red", weight:1, fill:false}).addTo(map);
+		var polygon = L.polygon(latlngs, {color:"red", weight:1, fill:false});
 		//zoom6layer.addLayer(polygon);
 		});
 });
@@ -497,7 +505,9 @@ $("#all_density").click(function(e){
 				x = Number(newplist[1]);
 				y = Number(newplist[2]);
 				cell_id = String(newplist[0]);
-				a = [x,y];
+				level = Number(newplist[3]) - 1;
+				console.log(level)
+				a = [[x,y], level];
 				if(kde_cell.hasOwnProperty(cell_id)){
 					kde_cell[cell_id].push(a);
 				}
@@ -509,10 +519,11 @@ $("#all_density").click(function(e){
 			Object.keys(kde_cell).forEach(function (cell_id){
 				var latlngs = [];
 				for(i=0; i<kde_cell[cell_id].length; i++){
-					var latlng = map.unproject(kde_cell[cell_id][i], map.getMaxZoom());
+					var latlng = map.unproject(kde_cell[cell_id][i][0], map.getMaxZoom());
 					latlngs.push([latlng.lat, latlng.lng]);
 				}
-				all_poly[cell_id] = L.polygon(latlngs, {color:"green", weight:1, fill:false}).addTo(map);
+				all_poly[cell_id] = L.polygon(latlngs, {color:all_density_color_list[kde_cell[cell_id][0][1]], weight:1, fill:false}).addTo(map);
+				//console.log(kde_cell[cell_id][0][1]);
 				});
 		});
 	}else{
@@ -537,7 +548,8 @@ $("#sc_density").click(function(e){
 				x = Number(newplist[1]);
 				y = Number(newplist[2]);
 				cell_id = String(newplist[0]);
-				a = [x,y];
+				level = Number(newplist[3]) - 1;
+				a = [[x,y], level];
 				if(kde_cell.hasOwnProperty(cell_id)){
 					kde_cell[cell_id].push(a);
 				}
@@ -550,10 +562,10 @@ $("#sc_density").click(function(e){
 			Object.keys(kde_cell).forEach(function (cell_id){
 				var latlngs = [];
 				for(i=0; i<kde_cell[cell_id].length; i++){
-					var latlng = map.unproject(kde_cell[cell_id][i], map.getMaxZoom());
+					var latlng = map.unproject(kde_cell[cell_id][i][0], map.getMaxZoom());
 					latlngs.push([latlng.lat, latlng.lng]);
 				}
-				sc_poly[count] = L.polygon(latlngs, {color:"blue", weight:1, fill:false}).addTo(map);
+				sc_poly[count] = L.polygon(latlngs, {color:sc_density_color_list[kde_cell[cell_id][0][1]], weight:1, fill:false}).addTo(map);
 				count++;
 				});
 		});
